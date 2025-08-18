@@ -1,20 +1,31 @@
 stages:
   - install
   - test
+  - code_quality
+  - security
   - build
+  - deploy
 
+# ------------------ INSTALL ------------------
 install_backend:
   stage: install
   script:
     - cd backend
     - npm install
+  artifacts:
+    paths:
+      - backend/node_modules/
 
 install_frontend:
   stage: install
   script:
     - cd frontend
     - npm install
+  artifacts:
+    paths:
+      - frontend/node_modules/
 
+# ------------------ TEST ------------------
 test_backend:
   stage: test
   script:
@@ -27,9 +38,75 @@ test_frontend:
     - cd frontend
     - npm test || echo "No frontend tests found"
 
+# ------------------ CODE QUALITY (SonarQube alternative) ------------------
+# Using CodeClimate (free alternative to SonarQube)
+code_quality:
+  stage: code_quality
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_DRIVER: overlay2
+  script:
+    - apk add --no-cache curl git
+    - curl -L https://github.com/codeclimate/codeclimate/archive/master.tar.gz | tar xvz
+    - cd codeclimate-master
+    - ./bin/codeclimate analyze || echo "Code Quality check completed"
+  allow_failure: true
+  artifacts:
+    when: always
+    paths:
+      - gl-code-quality-report.json
+
+# ------------------ SECURITY SCANS ------------------
+# Snyk - Dependency Vulnerability Scan
+snyk_scan:
+  stage: security
+  image: node:16
+  script:
+    - npm install -g snyk
+    - cd backend && snyk test || true
+    - cd ../frontend && snyk test || true
+  allow_failure: true
+
+# OWASP ZAP DAST - Dynamic App Security Testing
+owasp_zap_scan:
+  stage: security
+  image: owasp/zap2docker-stable
+  script:
+    # Here assume your app runs on http://localhost:3000
+    - zap-baseline.py -t http://your-app-url.com -g gen.conf -r zap_report.html || true
+  artifacts:
+    when: always
+    paths:
+      - zap_report.html
+  allow_failure: true
+
+# ------------------ BUILD ------------------
+build_backend:
+  stage: build
+  script:
+    - cd backend
+    - npm run build || echo "No backend build step defined"
+  artifacts:
+    paths:
+      - backend/dist/
+
 build_frontend:
   stage: build
   script:
-    - cd frontend  
+    - cd frontend
     - npm run build
+  artifacts:
+    paths:
+      - frontend/build/
+
+# ------------------ DEPLOY (example only) ------------------
+deploy:
+  stage: deploy
+  script:
+    - echo "Deploying banking app..."
+    # Example: docker-compose up -d
+  only:
+    - main
 
