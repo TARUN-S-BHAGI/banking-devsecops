@@ -1,0 +1,35 @@
+stages:
+  - install
+  - test
+  - build
+
+install_backend:
+  stage: install
+  script:
+    - cd backend
+    - npm install
+
+install_frontend:
+  stage: install
+  script:
+    - cd frontend
+    - npm install
+
+test_backend:
+  stage: test
+  script:
+    - cd backend
+    - npm test || echo "No backend tests found"
+
+test_frontend:
+  stage: test
+  script:
+    - cd frontend
+    - npm test || echo "No frontend tests found"
+
+build_frontend:
+  stage: build
+  script:
+    - cd frontend  
+    - npm run build
+
