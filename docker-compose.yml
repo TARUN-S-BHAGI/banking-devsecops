@@ -1,27 +1,24 @@
-version: "3.8"
+name: devsecops_flawless
 
 services:
-  backend:
+  api:
     build: ./backend
-    ports:
-      - "5000:5000"
-    env_file:
-      - ./backend/.env
-    volumes:
-      - ./backend:/app
-    depends_on:
-      - mongo
-
-  frontend:
-    build: ./frontend
+    container_name: api
+    environment:
+      - PORT=3000
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-    stdin_open: true
-    tty: true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 20
 
-  mongo:
-    image: mongo
+  web:
+    build: ./frontend
+    container_name: web
     ports:
-      - "27017:27017"
+      - "5173:80"
+    depends_on:
+      - api
+
